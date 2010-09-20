@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# -------------------------------------------------------------------------------------------
+# "A LICENÇA BEER-WARE ou A LICENÇA DA CERVEJA" (Revisão 42 - Tradução Portugués Brasil 1):
+# <gabriel@comp.eng.br> escreveu este arquivo. Enquanto você retiver esta nota você
+# poderá fazer o que quiser com esta coisa. Caso nos encontremos algum dia e você ache
+# que esta coisa vale, você poderá me comprar uma cerveja em retribuição, Gabriel Fonseca.
+# -------------------------------------------------------------------------------------------
+
+
+#####################################
+#Variáveis de configuração do script#
+#  NÃO MEXER NAS OUTRAS VARIÁVEIS!  #
+#####################################
+
+
+. /etc/backup.conf
+
+#Função ajuda
+ajuda(){
+
+echo ""
+echo "Uso:"
+echo "	`basename $0` [OPÇÃO] - Realiza o backup dos arquivos configurados no script."
+echo "Opções:"
+echo "	-f	Força a realização do backup independente de modificação ou não;"
+echo "	-h	Exibe esse help."
+echo ""
+echo "Script desenvolvido por Gabriel Fonseca sobre a licença Beerware."
+echo ""
+}
+
+#Função de log
+log_backup(){
+
+echo "[$DATA] Backup feito por $USER. MD5: $1" >> $LOG
+
+}
+
+#Função cria tar
+cria_tar(){
+
+	tar -cvjf $NOME $BACKUP
+
+	MD5=`md5sum $NOME`
+
+	log_backup "$MD5";
+
+}
+
+#Função manda e-mail
+manda_email(){
+
+	evolution mailto:$EMAIL?body="$MD5"\&subject="$SUBJECT"\&attach="$ATTACH"
+
+}
+
+##################
+#Começo do script#
+##################
+
+if [ "$1" = "-h" ]; then
+
+	ajuda;
+	exit 0;
+fi
+
+
+if [ "$1" = "-f" ]; then
+
+	rm $PREFIXO*
+	cria_tar;
+	manda_email;
+	exit 0;
+
+fi
+
+if [ -e $PREFIXO* ]; then
+
+	ULTIMO=`ls $PREFIXO*`
+
+	tar --compare -f $ULTIMO
+
+	DIFF=`echo $?`
+
+	if [ $DIFF = "1" ]; then
+
+		cria_tar;
+		manda_email;
+		rm $ULTIMO
+
+	else
+
+		echo 'O backup já é o mais atual!'
+		exit 2;
+	fi	 
+
+else
+
+	cria_tar;
+	manda_email;
+
+fi
+
+exit 0
