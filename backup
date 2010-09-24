@@ -1,20 +1,23 @@
 #!/bin/bash
 
-# -------------------------------------------------------------------------------------------
-# "A LICENÇA BEER-WARE ou A LICENÇA DA CERVEJA" (Revisão 42 - Tradução Portugués Brasil 1):
-# <gabriel@comp.eng.br> escreveu este arquivo. Enquanto você retiver esta nota você
-# poderá fazer o que quiser com esta coisa. Caso nos encontremos algum dia e você ache
-# que esta coisa vale, você poderá me comprar uma cerveja em retribuição, Gabriel Fonseca.
-# -------------------------------------------------------------------------------------------
+#Do que será feito o backup
+PREFIXODIR='/home/gabriel/Documents/Camisetas'
+BACKUPDIR='.backup'
+BACKUP="*/Prontas modelo_camiseta.svg"
 
+#Nome dos arquivos
+PREFIXO=backup-
+DATA=`date +%Y%m%d-%H%M%S`
+NOME=$PREFIXO$DATA.tar.bz2
+ULTIMO=`ls $PREFIXODIR/$PREFIXO*`
 
-#####################################
-#Variáveis de configuração do script#
-#  NÃO MEXER NAS OUTRAS VARIÁVEIS!  #
-#####################################
+#Informações para envio do e-mail
+EMAIL='gabrielmcf@gmail.com'
+ATTACH="/home/gabriel/Documents/Camisetas/$NOME"
+SUBJECT="Backup Camisas"
 
-
-. /etc/backup.conf
+#Arquivo de log
+LOG="/var/log/backup.log"
 
 #Função ajuda
 ajuda(){
@@ -39,8 +42,8 @@ echo "[$DATA] Backup feito por $USER. MD5: $1" >> $LOG
 
 #Função cria tar
 cria_tar(){
-
-	tar -cvjf $NOME $BACKUP
+	
+	tar -cvjf $NOME $BACKUPDIR/*
 
 	MD5=`md5sum $NOME`
 
@@ -51,55 +54,62 @@ cria_tar(){
 #Função manda e-mail
 manda_email(){
 
-	evolution mailto:$EMAIL?body="$MD5"\&subject="$SUBJECT"\&attach="$ATTACH"
+	evolution mailto:$EMAIL?body="$MD5"\&subject="$SUBJECT"\&attach="$ATTACH" &
 
 }
+
 
 ##################
 #Começo do script#
 ##################
 
 if [ "$1" = "-h" ]; then
-
-	ajuda;
-	exit 0;
+ajuda;
+exit 0;
 fi
 
+cd $PREFIXODIR
 
-if [ "$1" = "-f" ]; then
+rm -f aux
 
-	rm $PREFIXO*
-	cria_tar;
-	manda_email;
-	exit 0;
+for i in `ls -d $BACKUP`; do
 
-fi
-
-if [ -e $PREFIXO* ]; then
-
-	ULTIMO=`ls $PREFIXO*`
-
-	tar --compare -f $ULTIMO
-
-	DIFF=`echo $?`
-
-	if [ $DIFF = "1" ]; then
-
-		cria_tar;
-		manda_email;
-		rm $ULTIMO
-
+	if [ -d $i ]; then
+		mkdir -p $BACKUPDIR/$i
+		rsync -iba $i/ $BACKUPDIR/$i >> aux
 	else
+		rsync -iba $i $BACKUPDIR >> aux
+	fi
 
-		echo 'O backup já é o mais atual!'
-		exit 2;
-	fi	 
+done
 
-else
-
+if [ -s aux -o "$1" = "-f" ]; then
 	cria_tar;
+	rm $ULTIMO aux
 	manda_email;
-
+	exit 0;
 fi
 
-exit 0
+if [ -z "$ULTIMO"  ]; then
+	cria_tar;
+	rm $ULTIMO aux
+	manda_email;
+	exit 0;
+fi
+
+echo "O último backup já é o mais atual!"
+
+rm -f aux
+
+
+
+
+
+
+
+
+
+
+
+
+

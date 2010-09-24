@@ -1,0 +1,5 @@
+Instalação:
+
+Copie o arquivo backup para uma pasta bin do sistem (ex. /usr/bin).
+
+Configure as variáveis dentro do arquivo para fazer backup do que se deseja.
